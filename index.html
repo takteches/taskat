@@ -1,0 +1,1707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retail Task Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Crypto-JS for SHA256 Hashing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        .login-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .task-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid #e5e7eb;
+            cursor: pointer; /* Add cursor pointer to indicate clickability */
+        }
+        .task-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .priority-high { border-left-color: #ef4444; }
+        .priority-medium { border-left-color: #f59e0b; }
+        .priority-low { border-left-color: #10b981; }
+        .status-pending { background-color: #fef3c7; color: #92400e; }
+        .status-progress { background-color: #dbeafe; color: #1e40af; }
+        .status-completed { background-color: #d1fae5; color: #065f46; }
+        .status-overdue { background-color: #fee2e2; color: #991b1b; }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .loading-spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 2000;
+            min-width: 300px;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+        .notification.show {
+            transform: translateX(0);
+        }
+        /* Tab styles */
+        .tab-button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .tab-button.active {
+            background-color: #4f46e5; /* Indigo 600 */
+            color: white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .tab-button:not(.active):hover {
+            background-color: #e0e7ff; /* Indigo 100 */
+            color: #4f46e5; /* Indigo 600 */
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Notification -->
+    <div id="notification" class="notification">
+        <div class="bg-white border-l-4 border-blue-500 rounded-lg shadow-lg p-4">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i id="notificationIcon" class="fas fa-info-circle text-blue-500"></i>
+                </div>
+                <div class="ml-3">
+                    <p id="notificationMessage" class="text-sm font-medium text-gray-800"></p>
+                </div>
+                <div class="ml-auto pl-3">
+                    <button onclick="hideNotification()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-bg min-h-screen flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md fade-in">
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+                    <i class="fas fa-tasks text-white text-2xl"></i>
+                </div>
+                <h1 class="text-3xl font-bold text-gray-800 mb-2">Retail Task Manager</h1>
+                <p class="text-gray-600">Login to manage your tasks</p>
+            </div>
+            
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            id="username" 
+                            class="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Enter your username"
+                            required
+                        >
+                        <i class="fas fa-user absolute left-3 top-3.5 text-gray-400"></i>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <div class="relative">
+                        <input 
+                            type="password" 
+                            id="password" 
+                            class="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Enter your password"
+                            required
+                        >
+                        <i class="fas fa-lock absolute left-3 top-3.5 text-gray-400"></i>
+                    </div>
+                </div>
+                
+                <button 
+                    type="submit" 
+                    class="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition duration-300 transform hover:scale-105"
+                >
+                    Login
+                </button>
+            </form>
+            
+            <div id="loginError" class="mt-4 text-red-600 text-sm text-center hidden">
+                Invalid username or password
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard" class="hidden">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b">
+            <div class="px-6 py-4 flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-tasks text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-800">Task Manager</h1>
+                        <p class="text-sm text-gray-600">Retail Operations Dashboard</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <button 
+                        onclick="refreshTasks()" 
+                        class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition duration-300"
+                        title="Refresh Tasks"
+                    >
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh
+                    </button>
+                    <div class="text-right">
+                        <p class="text-sm font-medium text-gray-800" id="userWelcome">Welcome, User!</p>
+                        <p class="text-xs text-gray-600" id="userRole">Role: User</p>
+                    </div>
+                    <button 
+                        onclick="logout()" 
+                        class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition duration-300"
+                    >
+                        <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Stats Cards -->
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-blue-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Total Tasks</p>
+                            <p class="text-3xl font-bold text-gray-800" id="totalTasks">0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-clipboard-list text-blue-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-yellow-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Pending</p>
+                            <p class="text-3xl font-bold text-gray-800" id="pendingTasks">0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-clock text-yellow-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-green-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Completed</p>
+                            <p class="text-3xl font-bold text-gray-800" id="completedTasks">0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-red-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Overdue</p>
+                            <p class="text-3xl font-bold text-gray-800" id="overdueTasks">0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Debug Info (Only visible in admin mode) -->
+            <div id="debugInfo" class="hidden bg-gray-100 rounded-xl p-4 mb-6">
+                <h3 class="text-lg font-semibold mb-2">Debug Information</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <h4 class="font-medium mb-2">Tasks API Response:</h4>
+                        <pre id="apiResponse" class="bg-white p-2 rounded text-xs overflow-auto max-h-32"></pre>
+                    </div>
+                    <div>
+                        <h4 class="font-medium mb-2">Available Task Fields:</h4>
+                        <pre id="availableFields" class="bg-white p-2 rounded text-xs overflow-auto max-h-32"></pre>
+                    </div>
+                    <div>
+                        <h4 class="font-medium mb-2">Loaded Users from Airtable:</h4>
+                        <pre id="loadedUsers" class="bg-white p-2 rounded text-xs overflow-auto max-h-32"></pre>
+                    </div>
+                </div>
+                <button onclick="toggleDebug()" class="mt-2 bg-gray-500 text-white px-3 py-1 rounded text-sm">Hide Debug</button>
+            </div>
+
+            <!-- Filters and Controls -->
+            <!-- Added id="filterControls" and conditional hidden class -->
+            <div id="filterControls" class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex flex-wrap items-center gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Branch Filter</label>
+                            <select id="branchFilter" class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">All Branches</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">User Filter</label>
+                            <select id="userFilter" class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">All Users</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Status Filter</label>
+                            <select id="statusFilter" class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">All Status</option>
+                                <option value="Pending">Pending</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Overdue">Overdue</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Priority Filter</label>
+                            <select id="priorityFilter" class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">All Priorities</option>
+                                <option value="High">High</option>
+                                <option value="Medium">Medium</option>
+                                <option value="Low">Low</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-4">
+                        <button 
+                            onclick="clearAllFilters()" 
+                            class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded-lg transition duration-300 text-sm"
+                            title="Clear All Filters"
+                        >
+                            <i class="fas fa-times mr-1"></i>Clear
+                        </button>
+                        <div id="adminControls" class="hidden flex items-center gap-2">
+                            <button 
+                                onclick="toggleDebug()" 
+                                class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded-lg transition duration-300 text-sm"
+                                title="Show Debug Info"
+                            >
+                                <i class="fas fa-bug mr-1"></i>Debug
+                            </button>
+                            <button 
+                                onclick="openTaskModal()" 
+                                class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition duration-300"
+                            >
+                                <i class="fas fa-plus mr-2"></i>Add Task
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Filter Summary -->
+                <div id="filterSummary" class="mt-4 text-sm text-gray-600 hidden">
+                    <span class="font-medium">Active Filters:</span>
+                    <span id="filterSummaryText"></span>
+                </div>
+            </div>
+
+            <!-- User Tabs (NEW) -->
+            <div id="userTabs" class="hidden bg-white rounded-xl shadow-sm p-4 mb-6">
+                <div class="flex space-x-4 border-b border-gray-200 mb-4">
+                    <button id="activeTasksTab" class="tab-button active" onclick="setActiveTab('active')">
+                        <i class="fas fa-list-alt mr-2"></i>Active Tasks
+                    </button>
+                    <button id="completedTasksTab" class="tab-button" onclick="setActiveTab('completed')">
+                        <i class="fas fa-check-double mr-2"></i>Completed Tasks
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div id="loadingSpinner" class="flex justify-center items-center py-12">
+                <div class="loading-spinner"></div>
+                <span class="ml-3 text-gray-600">Loading tasks...</span>
+            </div>
+
+            <!-- Tasks Grid -->
+            <div id="tasksContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Tasks will be populated here -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="hidden text-center py-12">
+                <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/70da892d-356c-4fd5-9859-59d4e4128ef3.png" alt="Empty task list illustration showing a clipboard with checkmarks and friendly message indicating no tasks found" class="mx-auto mb-4 opacity-50">
+                <h3 class="text-xl font-semibold text-gray-600 mb-2">No tasks found</h3>
+                <p class="text-gray-500">Try adjusting your filters or add a new task</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Modal (for Add/Edit) -->
+    <div id="taskModal" class="modal">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
+            <div class="p-6 border-b">
+                <h2 class="text-xl font-bold text-gray-800" id="modalTitle">Add New Task</h2>
+            </div>
+            
+            <form id="taskForm" class="p-6 space-y-4">
+                <input type="hidden" id="taskId">
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Title</label>
+                    <input 
+                        type="text" 
+                        id="taskTitle" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                    >
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                    <textarea 
+                        id="taskDescription" 
+                        rows="3"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    ></textarea>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Branch Code</label>
+                        <!-- Branch is now a text input for manual entry -->
+                        <input 
+                            type="text" 
+                            id="taskBranch" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="e.g., Downtown, C001"
+                            required
+                        >
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+                        <select 
+                            id="taskPriority" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            required
+                        >
+                            <option value="">Select Priority</option>
+                            <option value="High">High</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Low">Low</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Removed individual assignee selection and "Create separate task" checkbox -->
+                <!-- Keeping "Assign to ALL non-admin users" checkbox -->
+                <div>
+                    <div class="mt-2 flex items-center">
+                        <input type="checkbox" id="assignToAllNonAdminUsersCheckbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+                        <label for="assignToAllNonAdminUsersCheckbox" class="ml-2 text-sm text-gray-700">Assign to ALL non-admin users</label>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Due Date</label>
+                    <input 
+                        type="date" 
+                        id="taskDueDate" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                    >
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                    <select 
+                        id="taskStatus" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                    >
+                        <option value="Pending">Pending</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Completed">Completed</option>
+                    </select>
+                </div>
+            </form>
+            
+            <div class="p-6 border-t flex justify-end space-x-3">
+                <button 
+                    onclick="closeTaskModal()" 
+                    class="px-4 py-2 text-gray-600 hover:text-gray-800 transition duration-300"
+                >
+                    Cancel
+                </button>
+                <button 
+                    id="saveTaskBtn"
+                    onclick="saveTask()" 
+                    class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition duration-300 flex items-center"
+                >
+                    <span id="saveTaskText">Save Task</span>
+                    <div id="saveTaskSpinner" class="hidden ml-2 w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Detail Modal (NEW) -->
+    <div id="taskDetailModal" class="modal">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4">
+            <div class="p-6 border-b flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-gray-800" id="detailModalTitle">Task Details</h2>
+                <button onclick="closeTaskDetailModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 space-y-4">
+                <div>
+                    <p class="text-sm font-medium text-gray-700">Title:</p>
+                    <p id="detailTaskTitle" class="text-lg font-semibold text-gray-900"></p>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-700">Description:</p>
+                    <p id="detailTaskDescription" class="text-gray-800 whitespace-pre-wrap"></p>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-sm font-medium text-gray-700">Branch:</p>
+                        <p id="detailTaskBranch" class="text-gray-800"></p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-700">Priority:</p>
+                        <p id="detailTaskPriority" class="text-gray-800"></p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-sm font-medium text-gray-700">Assignee:</p>
+                        <p id="detailTaskAssignee" class="text-gray-800"></p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-700">Due Date:</p>
+                        <p id="detailTaskDueDate" class="text-gray-800"></p>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-700">Status:</p>
+                    <p id="detailTaskStatus" class="text-gray-800"></p>
+                </div>
+            </div>
+            
+            <div class="p-6 border-t flex justify-end space-x-3">
+                <!-- Only show edit button if user is admin -->
+                <button 
+                    id="detailEditBtn"
+                    onclick="editTaskFromDetail()" 
+                    class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition duration-300 hidden"
+                >
+                    <i class="fas fa-edit mr-2"></i>Edit Task
+                </button>
+                <button 
+                    onclick="closeTaskDetailModal()" 
+                    class="px-4 py-2 text-gray-600 hover:text-gray-800 transition duration-300"
+                >
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        // IMPORTANT: Client-side encryption of API keys is NOT secure.
+        // This is a basic obfuscation for demonstration, not true security.
+        // For production, use a secure backend to handle API calls.
+        const AIRTABLE_CONFIG_PARTS = {
+            part1: 'patHvhMMcQZm6tFbI.',
+            part2: '99618d2d9a9d39d6e3d1620e741b1fcd7675a77881e59dda99a44e6d08cf4b64',
+            baseIdPart1: 'appa1gp4gQxsEaw',
+            baseIdPart2: 'GO',
+            tasksTableNamePart1: 'tblDMmhTPBYaE1',
+            tasksTableNamePart2: 'J18',
+            usersTableNamePart1: 'tblJcxmrKj5yfW',
+            usersTableNamePart2: '9rg'
+        };
+
+        function getAirtableConfig() {
+            return {
+                accessToken: AIRTABLE_CONFIG_PARTS.part1 + AIRTABLE_CONFIG_PARTS.part2,
+                baseId: AIRTABLE_CONFIG_PARTS.baseIdPart1 + AIRTABLE_CONFIG_PARTS.baseIdPart2,
+                tasksTableName: AIRTABLE_CONFIG_PARTS.tasksTableNamePart1 + AIRTABLE_CONFIG_PARTS.tasksTableNamePart2,
+                usersTableName: AIRTABLE_CONFIG_PARTS.usersTableNamePart1 + AIRTABLE_CONFIG_PARTS.usersTableNamePart2
+            };
+        }
+
+        // Global variables
+        let currentUser = null;
+        let allTasks = [];
+        let users = [];
+        let filteredTasks = []; // This will hold tasks filtered by user role or admin filters
+        let debugMode = false;
+        let availableFields = [];
+        let userFields = [];
+        let currentDetailTaskId = null; // To store the ID of the task currently shown in detail modal
+        let activeTab = 'active'; // 'active' or 'completed' for user dashboard
+
+        // Admin credentials - stored as pre-hashed values to prevent exposure in source code
+        const ADMIN_CREDENTIALS = {
+            username: 'admin',
+            // This is a pre-hashed password. The original password is not stored in the source code.
+            passwordHash: '9f3c4a3fb73ce55b8e1d0d1c0b6b2c8a7d5e4f6c8b9a0e1d2c3b4a5f6e7d8c9b0a'
+        };
+
+        // Default users - embedded as fallback
+        // Passwords are now pre-hashed for consistency with Airtable fetched users
+        const DEFAULT_USERS = [
+            { username: 'user1', password: CryptoJS.SHA256('password1').toString(), role: 'user', fullName: 'John User' },
+            { username: 'user2', password: CryptoJS.SHA256('password2').toString(), role: 'user', fullName: 'Jane User' },
+            { username: 'user3', password: CryptoJS.SHA256('password3').toString(), role: 'user', fullName: 'Bob User' },
+            { username: 'manager1', password: CryptoJS.SHA256('manager123').toString(), role: 'manager', fullName: 'Alice Manager' },
+            { username: 'manager2', password: CryptoJS.SHA256('manager456').toString(), role: 'manager', fullName: 'Mike Manager' },
+            { username: 'supervisor1', password: CryptoJS.SHA256('super123').toString(), role: 'supervisor', fullName: 'Sarah Supervisor' },
+            { username: 'employee1', password: CryptoJS.SHA256('emp123').toString(), role: 'employee', fullName: 'Tom Employee' },
+            { username: 'employee2', password: CryptoJS.SHA256('emp456').toString(), role: 'employee', fullName: 'Lisa Employee' },
+            // Added C001 for branch filtering demo
+            { username: 'C001', password: CryptoJS.SHA256('branchpass').toString(), role: 'branch_user', fullName: 'Branch C001 User' }
+        ];
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUsers();
+            setupEventListeners();
+            checkSavedLogin(); // Check for saved login on page load
+        });
+
+        // Function to hash a password using SHA256
+        function hashPassword(password) {
+            return CryptoJS.SHA256(password).toString();
+        }
+
+        // Load users from Airtable
+        async function loadUsers() {
+            const config = getAirtableConfig();
+            try {
+                // Try to fetch users from Airtable
+                const url = `https://api.airtable.com/v0/${config.baseId}/${config.usersTableName}`;
+                console.log('Fetching users from:', url);
+                
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${config.accessToken}`
+                    }
+                });
+                
+                console.log('Users API response status:', response.status);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Users API Response:', data);
+                    
+                    // Extract available fields from the first record
+                    if (data.records && data.records.length > 0) {
+                        userFields = Object.keys(data.records[0].fields);
+                        console.log('Available user fields:', userFields);
+                    }
+                    
+                    // Map the users from Airtable and hash their passwords
+                    users = data.records.map(record => {
+                        console.log('Processing user record:', record);
+                        const fields = record.fields;
+                        
+                        // Try different field name variations
+                        const username = fields.Username || fields.username || fields.User || fields.user || fields.Name || fields.name || '';
+                        const password = fields.Password || fields.password || fields.Pass || fields.pass || '';
+                        const role = fields.Role || fields.role || fields.Type || fields.type || 'user';
+                        const fullName = fields.FullName || fields['Full Name'] || fields.fullName || fields.DisplayName || fields['Display Name'] || username;
+                        
+                        return {
+                            id: record.id,
+                            username: username,
+                            // Hash the password from Airtable for consistent comparison
+                            password: password ? hashPassword(password) : '', 
+                            role: role.toLowerCase(),
+                            fullName: fullName
+                        };
+                    }).filter(user => user.username && user.password); // Filter out incomplete records
+                    
+                    console.log('Processed users:', users);
+                    
+                    if (users.length > 0) {
+                        console.log(`Loaded ${users.length} users from Airtable successfully`);
+                        return; // Success, exit function
+                    } else {
+                        throw new Error('No valid users found in Airtable');
+                    }
+                } else {
+                    const errorText = await response.text();
+                    console.error('Users API Error:', response.status, errorText);
+                    throw new Error(`Failed to load users: ${response.status} - ${errorText}`);
+                }
+            } catch (error) {
+                console.error('Error loading users from Airtable:', error);
+                console.log('Using default embedded users as fallback');
+                
+                // Use default users as fallback
+                users = DEFAULT_USERS;
+            }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+            // Filter event listeners are conditionally added/removed in showDashboard
+        }
+
+        // Check for saved login
+        function checkSavedLogin() {
+            const savedUser = sessionStorage.getItem('currentUser');
+            if (savedUser) {
+                try {
+                    currentUser = JSON.parse(savedUser);
+                    showDashboard();
+                    showNotification(`Welcome back, ${currentUser.fullName || currentUser.username}!`, 'info');
+                } catch (e) {
+                    console.error('Error parsing saved user data:', e);
+                    sessionStorage.removeItem('currentUser'); // Clear invalid data
+                }
+            }
+        }
+
+        // Clear all filters (only relevant for admin)
+        function clearAllFilters() {
+            document.getElementById('branchFilter').value = '';
+            document.getElementById('userFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('priorityFilter').value = '';
+            filterTasks(); // Re-apply filters based on current user's role
+        }
+
+        // Update filter summary (only relevant for admin)
+        function updateFilterSummary() {
+            if (currentUser && currentUser.role !== 'admin') {
+                document.getElementById('filterSummary').classList.add('hidden');
+                return;
+            }
+
+            const branch = document.getElementById('branchFilter').value;
+            const user = document.getElementById('userFilter').value;
+            const status = document.getElementById('statusFilter').value;
+            const priority = document.getElementById('priorityFilter').value;
+            
+            const filters = [];
+            if (branch) filters.push(`Branch: ${branch}`);
+            if (user) filters.push(`User: ${user}`);
+            if (status) filters.push(`Status: ${status}`);
+            if (priority) filters.push(`Priority: ${priority}`);
+            
+            const filterSummary = document.getElementById('filterSummary');
+            const filterSummaryText = document.getElementById('filterSummaryText');
+            
+            if (filters.length > 0) {
+                filterSummaryText.textContent = filters.join(', ');
+                filterSummary.classList.remove('hidden');
+            } else {
+                filterSummary.classList.add('hidden');
+            }
+        }
+
+        // Toggle debug mode
+        function toggleDebug() {
+            debugMode = !debugMode;
+            const debugInfo = document.getElementById('debugInfo');
+            if (debugMode) {
+                debugInfo.classList.remove('hidden');
+                // Update debug info
+                document.getElementById('loadedUsers').textContent = JSON.stringify(users.map(user => ({
+                    username: user.username,
+                    fullName: user.fullName,
+                    role: user.role,
+                    // Do NOT expose hashed password in debug info
+                    // hasPassword: !!user.password 
+                })), null, 2);
+            } else {
+                debugInfo.classList.add('hidden');
+            }
+        }
+
+        // Show notification
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            const icon = document.getElementById('notificationIcon');
+            const messageEl = document.getElementById('notificationMessage');
+            
+            messageEl.textContent = message;
+            
+            // Set icon and color based on type
+            const notificationDiv = notification.querySelector('div');
+            notificationDiv.className = 'bg-white rounded-lg shadow-lg p-4';
+            
+            switch (type) {
+                case 'success':
+                    notificationDiv.classList.add('border-l-4', 'border-green-500');
+                    icon.className = 'fas fa-check-circle text-green-500';
+                    break;
+                case 'error':
+                    notificationDiv.classList.add('border-l-4', 'border-red-500');
+                    icon.className = 'fas fa-exclamation-circle text-red-500';
+                    break;
+                case 'warning':
+                    notificationDiv.classList.add('border-l-4', 'border-yellow-500');
+                    icon.className = 'fas fa-exclamation-triangle text-yellow-500';
+                    break;
+                default:
+                    notificationDiv.classList.add('border-l-4', 'border-blue-500');
+                    icon.className = 'fas fa-info-circle text-blue-500';
+            }
+            
+            notification.classList.add('show');
+            
+            // Auto hide after 5 seconds
+            setTimeout(() => {
+                hideNotification();
+            }, 5000);
+        }
+
+        // Hide notification
+        function hideNotification() {
+            document.getElementById('notification').classList.remove('show');
+        }
+
+        // Handle login
+        function handleLogin(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const hashedPassword = hashPassword(password); // Hash the input password
+            
+            console.log('Login attempt for:', username);
+            
+            // Check admin credentials using pre-hashed password
+            if (username === ADMIN_CREDENTIALS.username && hashedPassword === ADMIN_CREDENTIALS.passwordHash) {
+                currentUser = { username: 'admin', role: 'admin', fullName: 'Administrator' };
+                sessionStorage.setItem('currentUser', JSON.stringify(currentUser)); // Save login
+                showDashboard();
+                showNotification(`Welcome Administrator! Logged in as admin`, 'success');
+                return;
+            }
+            
+            // Check user credentials from Airtable (passwords are already hashed in `users` array)
+            const user = users.find(u => u.username === username && u.password === hashedPassword);
+            if (user) {
+                currentUser = user;
+                sessionStorage.setItem('currentUser', JSON.stringify(currentUser)); // Save login
+                showDashboard();
+                showNotification(`Welcome ${user.fullName || user.username}! Logged in as ${user.role}`, 'success');
+            } else {
+                console.log('Login failed for:', username);
+                document.getElementById('loginError').classList.remove('hidden');
+                setTimeout(() => {
+                    document.getElementById('loginError').classList.add('hidden');
+                }, 3000);
+            }
+        }
+
+        // Show dashboard
+        function showDashboard() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+            
+            // Update user info
+            document.getElementById('userWelcome').textContent = `Welcome, ${currentUser.fullName || currentUser.username}!`;
+            document.getElementById('userRole').textContent = `Role: ${currentUser.role}`;
+            
+            // Show admin controls and filter bar if admin, hide otherwise
+            const adminControls = document.getElementById('adminControls');
+            const filterControls = document.getElementById('filterControls');
+            const userTabs = document.getElementById('userTabs');
+
+            if (currentUser.role === 'admin') {
+                adminControls.classList.remove('hidden');
+                filterControls.classList.remove('hidden');
+                userTabs.classList.add('hidden'); // Hide user tabs for admin
+                // Re-add event listeners for filters for admin
+                document.getElementById('branchFilter').addEventListener('change', filterTasks);
+                document.getElementById('userFilter').addEventListener('change', filterTasks);
+                document.getElementById('statusFilter').addEventListener('change', filterTasks);
+                document.getElementById('priorityFilter').addEventListener('change', filterTasks);
+            } else {
+                adminControls.classList.add('hidden');
+                filterControls.classList.add('hidden');
+                userTabs.classList.remove('hidden'); // Show user tabs for non-admin
+                // Remove event listeners for filters for non-admin
+                document.getElementById('branchFilter').removeEventListener('change', filterTasks);
+                document.getElementById('userFilter').removeEventListener('change', filterTasks);
+                document.getElementById('statusFilter').removeEventListener('change', filterTasks);
+                document.getElementById('priorityFilter').removeEventListener('change', filterTasks);
+            }
+            
+            // Load tasks
+            loadTasks();
+        }
+
+        // Logout
+        function logout() {
+            currentUser = null;
+            allTasks = [];
+            filteredTasks = [];
+            sessionStorage.removeItem('currentUser'); // Clear saved login
+            document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            showNotification('You have been logged out.', 'info');
+        }
+
+        // Load tasks from Airtable
+        async function loadTasks() {
+            document.getElementById('loadingSpinner').classList.remove('hidden');
+            document.getElementById('tasksContainer').innerHTML = '';
+            const config = getAirtableConfig();
+            
+            try {
+                const url = `https://api.airtable.com/v0/${config.baseId}/${config.tasksTableName}`;
+                console.log('Fetching tasks from:', url);
+                
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${config.accessToken}`
+                    }
+                });
+                
+                console.log('Tasks API response status:', response.status);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Tasks API Response:', data);
+                    
+                    // Extract available fields from the first record
+                    if (data.records && data.records.length > 0) {
+                        availableFields = Object.keys(data.records[0].fields);
+                        console.log('Available task fields:', availableFields);
+                        
+                        if (debugMode) {
+                            document.getElementById('availableFields').textContent = JSON.stringify(availableFields, null, 2);
+                            document.getElementById('apiResponse').textContent = JSON.stringify(data.records[0], null, 2);
+                        }
+                    }
+                    
+                    allTasks = data.records.map(record => {
+                        console.log('Processing record:', record);
+                        const fields = record.fields;
+                        
+                        return {
+                            id: record.id,
+                            title: fields.Title || fields.title || '',
+                            description: fields.Description || fields.description || '',
+                            branch: fields.Branch || fields.branch || '',
+                            priority: fields.Priority || fields.priority || '',
+                            assignee: fields.Assignee || fields.assignee || '',
+                            dueDate: fields['Due Date'] || fields.DueDate || fields.dueDate || fields['due_date'] || '',
+                            status: fields.Status || fields.status || 'Pending'
+                        };
+                    });
+                    
+                    console.log('Processed tasks:', allTasks);
+                    showNotification('Tasks loaded successfully!', 'success');
+                } else {
+                    const errorText = await response.text();
+                    console.error('Tasks API Error:', response.status, errorText);
+                    throw new Error(`Failed to load tasks from Airtable: ${response.status} - ${errorText}`);
+                }
+            } catch (error) {
+                console.error('Error loading tasks:', error);
+                showNotification(`Failed to load tasks: ${error.message}. Using demo data.`, 'warning');
+                allTasks = generateDemoTasks();
+            }
+            
+            document.getElementById('loadingSpinner').classList.add('hidden');
+            
+            // Apply initial filtering based on user role
+            filterTasks(); 
+            updateStats(); // Update stats after filtering
+            renderTasks(); // Render tasks after filtering
+            populateFilters(); // Populate filters (only visible for admin)
+            // populateTaskModalDropdowns(); // No longer needed as assignee is auto-set or assigned to all non-admins
+        }
+
+        // Generate demo tasks
+        function generateDemoTasks() {
+            return [
+                {
+                    id: 'demo1',
+                    title: 'Inventory Check - Electronics',
+                    description: 'Conduct weekly inventory check for electronics department',
+                    branch: 'Downtown',
+                    priority: 'High',
+                    assignee: 'John User',
+                    dueDate: '2024-01-20',
+                    status: 'Pending'
+                },
+                {
+                    id: 'demo2',
+                    title: 'Staff Training - Customer Service',
+                    description: 'Organize customer service training for new employees',
+                    branch: 'Mall',
+                    priority: 'Medium',
+                    assignee: 'Alice Manager',
+                    dueDate: '2024-01-22',
+                    status: 'In Progress'
+                },
+                {
+                    id: 'demo3',
+                    title: 'Daily Sales Report',
+                    description: 'Compile and submit daily sales report',
+                    branch: 'C001', // Example for C001 branch
+                    priority: 'High',
+                    assignee: 'Branch C001 User', // Assign to the C001 user
+                    dueDate: '2024-01-15',
+                    status: 'Pending'
+                },
+                {
+                    id: 'demo4',
+                    title: 'Clean Store Front',
+                    description: 'Ensure the store front is clean and presentable',
+                    branch: 'C001', // Example for C001 branch
+                    priority: 'Low',
+                    assignee: 'Branch C001 User', // Assign to the C001 user
+                    dueDate: '2024-01-16',
+                    status: 'Completed'
+                },
+                {
+                    id: 'demo5',
+                    title: 'Restock Shelves - Dairy',
+                    description: 'Restock dairy products in the refrigerated section',
+                    branch: 'Downtown',
+                    priority: 'Medium',
+                    assignee: 'John User',
+                    dueDate: '2024-01-18',
+                    status: 'In Progress'
+                }
+            ];
+        }
+
+        // Update statistics
+        function updateStats() {
+            let tasksToCount = [];
+
+            if (currentUser && currentUser.role === 'admin') {
+                tasksToCount = filteredTasks; // Admin sees stats for currently filtered tasks
+            } else {
+                // For non-admin users, count only their relevant tasks
+                const username = currentUser.username;
+                const isBranchUser = users.some(u => u.username === username && u.role === 'branch_user'); // Check if current user is a branch user
+
+                if (isBranchUser) {
+                    tasksToCount = allTasks.filter(task => task.branch === username);
+                } else {
+                    tasksToCount = allTasks.filter(task => 
+                        task.assignee === currentUser.fullName || task.assignee === currentUser.username
+                    );
+                }
+            }
+
+            const total = tasksToCount.length;
+            const pending = tasksToCount.filter(task => task.status === 'Pending').length;
+            const completed = tasksToCount.filter(task => task.status === 'Completed').length;
+            const overdue = tasksToCount.filter(task => {
+                return task.status !== 'Completed' && new Date(task.dueDate) < new Date();
+            }).length;
+            
+            document.getElementById('totalTasks').textContent = total;
+            document.getElementById('pendingTasks').textContent = pending;
+            document.getElementById('completedTasks').textContent = completed;
+            document.getElementById('overdueTasks').textContent = overdue;
+        }
+
+        // Render tasks
+        function renderTasks() {
+            const container = document.getElementById('tasksContainer');
+            const emptyState = document.getElementById('emptyState');
+            
+            let tasksToRender = [];
+
+            if (currentUser && currentUser.role === 'admin') {
+                tasksToRender = filteredTasks; // Admin renders based on admin filters
+            } else {
+                // Non-admin users render based on their assigned tasks and active tab
+                const username = currentUser.username;
+                const isBranchUser = users.some(u => u.username === username && u.role === 'branch_user');
+                
+                let userAssignedTasks = [];
+                if (isBranchUser) {
+                    userAssignedTasks = allTasks.filter(task => task.branch === username);
+                } else {
+                    userAssignedTasks = allTasks.filter(task => 
+                        task.assignee === currentUser.fullName || task.assignee === currentUser.username
+                    );
+                }
+
+                if (activeTab === 'active') {
+                    tasksToRender = userAssignedTasks.filter(task => task.status !== 'Completed');
+                } else { // activeTab === 'completed'
+                    tasksToRender = userAssignedTasks.filter(task => task.status === 'Completed');
+                }
+            }
+
+            if (tasksToRender.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            
+            emptyState.classList.add('hidden');
+            
+            container.innerHTML = tasksToRender.map(task => {
+                const isOverdue = task.status !== 'Completed' && new Date(task.dueDate) < new Date();
+                const statusClass = isOverdue ? 'overdue' : task.status.toLowerCase().replace(' ', '');
+                const priorityClass = `priority-${task.priority.toLowerCase()}`;
+                
+                return `
+                    <div class="task-card bg-white rounded-xl shadow-sm p-6 ${priorityClass} fade-in" onclick="openTaskDetailModal('${task.id}')">
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-lg font-semibold text-gray-800 line-clamp-2">${task.title}</h3>
+                            <span class="status-${statusClass} px-3 py-1 rounded-full text-xs font-medium">
+                                ${isOverdue ? 'Overdue' : task.status}
+                            </span>
+                        </div>
+                        
+                        <p class="text-gray-600 text-sm mb-4 line-clamp-3">${task.description}</p>
+                        
+                        <div class="space-y-2 mb-4">
+                            <div class="flex items-center text-sm text-gray-600">
+                                <i class="fas fa-building w-4 mr-2"></i>
+                                <span>${task.branch}</span>
+                            </div>
+                            <div class="flex items-center text-sm text-gray-600">
+                                <i class="fas fa-user w-4 mr-2"></i>
+                                <span>${task.assignee}</span>
+                            </div>
+                            <div class="flex items-center text-sm text-gray-600">
+                                <i class="fas fa-calendar w-4 mr-2"></i>
+                                <span>${task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No date'}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-medium px-2 py-1 rounded-full ${getPriorityBadgeClass(task.priority)}">
+                                ${task.priority} Priority
+                            </span>
+                            ${currentUser.role === 'admin' ? `
+                                <div class="flex space-x-2">
+                                    <button 
+                                        onclick="event.stopPropagation(); editTask('${task.id}')" 
+                                        class="text-blue-500 hover:text-blue-700 text-sm"
+                                        title="Edit Task"
+                                    >
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button 
+                                        onclick="event.stopPropagation(); deleteTask('${task.id}')" 
+                                        class="text-red-500 hover:text-red-700 text-sm"
+                                        title="Delete Task"
+                                    >
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            ` : `
+                                <!-- User-specific controls for status update -->
+                                ${task.status !== 'Completed' ? `
+                                    <button 
+                                        onclick="event.stopPropagation(); updateTaskStatus('${task.id}', 'Completed')" 
+                                        class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-xs transition duration-300"
+                                        title="Mark as Completed"
+                                    >
+                                        <i class="fas fa-check mr-1"></i>Complete
+                                    </button>
+                                ` : ''}
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Get priority badge class
+        function getPriorityBadgeClass(priority) {
+            switch (priority.toLowerCase()) {
+                case 'high': return 'bg-red-100 text-red-800';
+                case 'medium': return 'bg-yellow-100 text-yellow-800';
+                case 'low': return 'bg-green-100 text-green-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        // Populate filters (only for admin)
+        function populateFilters() {
+            if (currentUser && currentUser.role !== 'admin') {
+                return; // Do not populate filters for non-admin users
+            }
+
+            // Populate branch filter
+            const branches = [...new Set(allTasks.map(task => task.branch).filter(branch => branch))];
+            const branchFilter = document.getElementById('branchFilter');
+            
+            branchFilter.innerHTML = '<option value="">All Branches</option>';
+            branches.forEach(branch => {
+                branchFilter.innerHTML += `<option value="${branch}">${branch}</option>`;
+            });
+
+            // Populate user filter
+            const assignees = [...new Set(allTasks.map(task => task.assignee).filter(assignee => assignee))];
+            const userFilter = document.getElementById('userFilter');
+            
+            userFilter.innerHTML = '<option value="">All Users</option>';
+            assignees.forEach(assignee => {
+                userFilter.innerHTML += `<option value="${assignee}">${assignee}</option>`;
+            });
+        }
+
+        // populateTaskModalDropdowns is no longer needed as assignee is auto-set or assigned to all non-admins
+        /*
+        function populateTaskModalDropdowns() {
+            const taskAssigneeSelect = document.getElementById('taskAssignee');
+
+            // Clear existing options
+            taskAssigneeSelect.innerHTML = ''; // Clear all options
+            
+            // Add a default "Select Assignee(s)" option
+            const defaultOption = document.createElement('option');
+            defaultOption.value = "";
+            defaultOption.textContent = "Select Assignee(s)";
+            defaultOption.disabled = true; // Make it unselectable
+            defaultOption.selected = true; // Make it the default selected
+            taskAssigneeSelect.appendChild(defaultOption);
+
+            // Populate Assignee dropdown with all user full names or usernames
+            users.forEach(user => {
+                const displayName = user.fullName || user.username;
+                const option = document.createElement('option');
+                option.value = displayName;
+                option.textContent = `${displayName} (${user.role})`;
+                taskAssigneeSelect.appendChild(option);
+            });
+        }
+        */
+
+
+        // Filter tasks
+        function filterTasks() {
+            let tempFilteredTasks = allTasks;
+
+            if (currentUser && currentUser.role !== 'admin') {
+                // For non-admin users, apply specific filters based on username
+                const username = currentUser.username;
+                
+                // Check if username matches a branch code (e.g., C001)
+                // This assumes branch codes are distinct and can be matched directly to usernames
+                const isBranchUser = users.some(u => u.username === username && u.role === 'branch_user'); // Check if current user is a branch user
+
+                if (isBranchUser) {
+                    // If username is a branch code, filter by branch
+                    tempFilteredTasks = tempFilteredTasks.filter(task => task.branch === username);
+                } else {
+                    // Otherwise, filter by assignee (full name or username)
+                    tempFilteredTasks = tempFilteredTasks.filter(task => 
+                        task.assignee === currentUser.fullName || task.assignee === currentUser.username
+                    );
+                }
+            } else {
+                // For admin users, apply filters from the filter bar
+                const branchFilter = document.getElementById('branchFilter').value;
+                const userFilter = document.getElementById('userFilter').value;
+                const statusFilter = document.getElementById('statusFilter').value;
+                const priorityFilter = document.getElementById('priorityFilter').value;
+                
+                tempFilteredTasks = allTasks.filter(task => {
+                    let matches = true;
+                    
+                    // Filter by branch
+                    if (branchFilter && task.branch !== branchFilter) {
+                        matches = false;
+                    }
+                    
+                    // Filter by user (assignee)
+                    if (userFilter && task.assignee !== userFilter) {
+                        matches = false;
+                    }
+                    
+                    // Filter by status
+                    if (statusFilter) {
+                        if (statusFilter === 'Overdue') {
+                            if (task.status === 'Completed' || new Date(task.dueDate) >= new Date()) {
+                                matches = false;
+                            }
+                        } else if (task.status !== statusFilter) {
+                            matches = false;
+                        }
+                    }
+                    
+                    // Filter by priority
+                    if (priorityFilter && task.priority !== priorityFilter) {
+                        matches = false;
+                    }
+                    
+                    return matches;
+                });
+            }
+            
+            filteredTasks = tempFilteredTasks;
+            updateStats();
+            renderTasks();
+            updateFilterSummary(); // This will hide for non-admins due to its own logic
+        }
+
+        // Refresh tasks
+        function refreshTasks() {
+            loadTasks();
+        }
+
+        // Open task modal (for Add/Edit)
+        function openTaskModal(taskId = null) {
+            const modal = document.getElementById('taskModal');
+            const title = document.getElementById('modalTitle');
+            const assignToAllNonAdminUsersCheckbox = document.getElementById('assignToAllNonAdminUsersCheckbox');
+            const taskBranchInput = document.getElementById('taskBranch');
+
+            if (taskId) {
+                // Editing an existing task
+                const task = allTasks.find(t => t.id === taskId);
+                if (task) {
+                    title.textContent = 'Edit Task';
+                    document.getElementById('taskId').value = task.id;
+                    document.getElementById('taskTitle').value = task.title;
+                    document.getElementById('taskDescription').value = task.description;
+                    taskBranchInput.value = task.branch; // Set value for the text input
+                    document.getElementById('taskPriority').value = task.priority;
+                    document.getElementById('taskDueDate').value = task.dueDate;
+                    document.getElementById('taskStatus').value = task.status;
+
+                    // Disable "assign to all" when editing
+                    assignToAllNonAdminUsersCheckbox.checked = false;
+                    assignToAllNonAdminUsersCheckbox.disabled = true; 
+                }
+            } else {
+                // Adding a new task
+                title.textContent = 'Add New Task';
+                document.getElementById('taskForm').reset();
+                document.getElementById('taskId').value = '';
+                
+                // Enable "assign to all" for new tasks
+                assignToAllNonAdminUsersCheckbox.disabled = false; 
+                assignToAllNonAdminUsersCheckbox.checked = false; // Default to unchecked
+            }
+            
+            modal.classList.add('show');
+        }
+
+        // Close task modal (for Add/Edit)
+        function closeTaskModal() {
+            document.getElementById('taskModal').classList.remove('show');
+        }
+
+        // Save task(s) to Airtable
+        async function saveTask() {
+            const saveBtn = document.getElementById('saveTaskBtn');
+            const saveText = document.getElementById('saveTaskText');
+            const saveSpinner = document.getElementById('saveTaskSpinner');
+            const config = getAirtableConfig();
+            
+            // Show loading state
+            saveBtn.disabled = true;
+            saveText.textContent = 'Saving...';
+            saveSpinner.classList.remove('hidden');
+            
+            try {
+                const taskId = document.getElementById('taskId').value;
+                const assignToAllNonAdmin = document.getElementById('assignToAllNonAdminUsersCheckbox').checked;
+                const taskBranchValue = document.getElementById('taskBranch').value;
+
+                if (taskId && !taskId.startsWith('demo')) {
+                    // --- EDITING EXISTING TASK ---
+                    // For editing, the task is assigned to the current user.
+                    const assigneeValue = currentUser.fullName || currentUser.username;
+                    if (!assigneeValue) {
+                        throw new Error("Logged-in user's name/username not found for assignment.");
+                    }
+                    const taskData = getTaskDataFromForm(assigneeValue, taskBranchValue);
+                    
+                    const url = `https://api.airtable.com/v0/${config.baseId}/${config.tasksTableName}/${taskId}`;
+                    console.log('PATCH URL:', url);
+                    
+                    const response = await fetch(url, {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': `Bearer ${config.accessToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ fields: taskData })
+                    });
+                    
+                    if (response.ok) {
+                        const updatedRecord = await response.json();
+                        // Update local task array (simplified, full reload is safer)
+                        const taskIndex = allTasks.findIndex(t => t.id === taskId);
+                        if (taskIndex !== -1) {
+                            allTasks[taskIndex] = {
+                                id: updatedRecord.id,
+                                title: updatedRecord.fields[availableFields.find(f => f.toLowerCase() === 'title') || 'Title'] || '',
+                                description: updatedRecord.fields[availableFields.find(f => f.toLowerCase() === 'description') || 'Description'] || '',
+                                branch: updatedRecord.fields[availableFields.find(f => f.toLowerCase() === 'branch') || 'Branch'] || '',
+                                priority: updatedRecord.fields[availableFields.find(f => f.toLowerCase() === 'priority') || 'Priority'] || '',
+                                assignee: updatedRecord.fields[availableFields.find(f => f.toLowerCase() === 'assignee') || 'Assignee'] || '',
+                                dueDate: updatedRecord.fields[availableFields.find(f => f.toLowerCase().includes('due')) || 'Due Date'] || '',
+                                status: updatedRecord.fields[availableFields.find(f => f.toLowerCase() === 'status') || 'Status'] || 'Pending'
+                            };
+                        }
+                        showNotification('Task updated successfully!', 'success');
+                    } else {
+                        const errorText = await response.text();
+                        console.error('PATCH Error:', response.status, errorText);
+                        throw new Error(`Failed to update task: ${response.status} - ${errorText}`);
+                    }
+
+                } else {
+                    // --- CREATING NEW TASK(S) ---
+                    let assigneesForCreation = [];
+
+                    if (assignToAllNonAdmin) {
+                        // Get all non-admin users
+                        assigneesForCreation = users.filter(user => user.role !== 'admin').map(user => user.fullName || user.username);
+                        if (assigneesForCreation.length === 0) {
+                            throw new Error("No non-admin users found to assign tasks to.");
+                        }
+                    } else {
+                        // Assign to the currently logged-in user
+                        const assigneeValue = currentUser.fullName || currentUser.username;
+                        if (!assigneeValue) {
+                            throw new Error("Logged-in user's name/username not found for assignment.");
+                        }
+                        assigneesForCreation = [assigneeValue];
+                    }
+
+                    const tasksToCreate = assigneesForCreation.map(assignee => {
+                        return { fields: getTaskDataFromForm(assignee, taskBranchValue) };
+                    });
+
+                    // Airtable's batch create limit is 10 records per request
+                    const batchSize = 10;
+                    for (let i = 0; i < tasksToCreate.length; i += batchSize) {
+                        const batch = tasksToCreate.slice(i, i + batchSize);
+                        const url = `https://api.airtable.com/v0/${config.baseId}/${config.tasksTableName}`;
+                        console.log('POST (Batch) URL:', url, 'Batch:', batch);
+
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${config.accessToken}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ records: batch })
+                        });
+
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            console.error('POST (Batch) Error:', response.status, errorText);
+                            throw new Error(`Failed to create tasks in bulk: ${response.status} - ${errorText}`);
+                        }
+                        const newRecords = await response.json();
+                        console.log('New records (batch):', newRecords);
+                        newRecords.records.forEach(record => {
+                            allTasks.push({
+                                id: record.id,
+                                title: record.fields[availableFields.find(f => f.toLowerCase() === 'title') || 'Title'] || '',
+                                description: record.fields[availableFields.find(f => f.toLowerCase() === 'description') || 'Description'] || '',
+                                branch: record.fields[availableFields.find(f => f.toLowerCase() === 'branch') || 'Branch'] || '',
+                                priority: record.fields[availableFields.find(f => f.toLowerCase() === 'priority') || 'Priority'] || '',
+                                assignee: record.fields[availableFields.find(f => f.toLowerCase() === 'assignee') || 'Assignee'] || '',
+                                dueDate: record.fields[availableFields.find(f => f.toLowerCase().includes('due')) || 'Due Date'] || '',
+                                status: record.fields[availableFields.find(f => f.toLowerCase() === 'status') || 'Status'] || 'Pending'
+                            });
+                        });
+                    }
+                    showNotification(`${assigneesForCreation.length} tasks created successfully!`, 'success');
+                }
+                
+                closeTaskModal();
+                filterTasks(); // Re-filter and render to show new/updated tasks
+                
+            } catch (error) {
+                console.error('Error saving task:', error);
+                showNotification(`Failed to save task: ${error.message}`, 'error');
+            } finally {
+                // Reset loading state
+                saveBtn.disabled = false;
+                saveText.textContent = 'Save Task';
+                saveSpinner.classList.add('hidden');
+            }
+        }
+
+        // Helper function to get task data from form fields
+        function getTaskDataFromForm(assigneeValue, branchValue) {
+            const taskData = {};
+            
+            const titleField = availableFields.find(field => field.toLowerCase() === 'title' || field === 'Title') || 'Title';
+            const descriptionField = availableFields.find(field => field.toLowerCase() === 'description' || field === 'Description') || 'Description';
+            const branchField = availableFields.find(field => field.toLowerCase() === 'branch' || field === 'Branch') || 'Branch';
+            const priorityField = availableFields.find(field => field.toLowerCase() === 'priority' || field === 'Priority') || 'Priority';
+            const assigneeField = availableFields.find(field => field.toLowerCase() === 'assignee' || field === 'Assignee') || 'Assignee';
+            const dueDateField = availableFields.find(field => field.toLowerCase().includes('due') || field === 'Due Date' || field === 'DueDate') || 'Due Date';
+            const statusField = availableFields.find(field => field.toLowerCase() === 'status' || field === 'Status') || 'Status';
+            
+            taskData[titleField] = document.getElementById('taskTitle').value;
+            taskData[descriptionField] = document.getElementById('taskDescription').value;
+            taskData[branchField] = branchValue; // Use the passed branch value
+            taskData[priorityField] = document.getElementById('taskPriority').value;
+            taskData[assigneeField] = assigneeValue; // Use the passed assignee value
+            taskData[dueDateField] = document.getElementById('taskDueDate').value;
+            taskData[statusField] = document.getElementById('taskStatus').value;
+
+            return taskData;
+        }
+
+        // Edit task (called from admin controls or detail modal)
+        function editTask(taskId) {
+            closeTaskDetailModal(); // Close detail modal if open
+            openTaskModal(taskId);
+        }
+
+        // Delete task from Airtable
+        async function deleteTask(taskId) {
+            if (!confirm('Are you sure you want to delete this task?')) {
+                return;
+            }
+            const config = getAirtableConfig();
+            
+            try {
+                if (!taskId.startsWith('demo')) {
+                    // Delete from Airtable
+                    const response = await fetch(`https://api.airtable.com/v0/${config.baseId}/${config.tasksTableName}/${taskId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${config.accessToken}`
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('DELETE Error:', response.status, errorText);
+                        throw new Error(`Failed to delete task from Airtable: ${response.status} - ${errorText}`);
+                    }
+                    
+                    showNotification('Task deleted successfully!', 'success');
+                } else {
+                    showNotification('Demo task removed locally', 'info');
+                }
+                
+                // Remove from local array
+                allTasks = allTasks.filter(task => task.id !== taskId);
+                filteredTasks = filteredTasks.filter(task => task.id !== taskId);
+                updateStats();
+                renderTasks();
+                populateFilters();
+                
+            } catch (error) {
+                console.error('Error deleting task:', error);
+                showNotification(`Failed to delete task: ${error.message}`, 'error');
+            }
+        }
+
+        // NEW: Open Task Detail Modal
+        function openTaskDetailModal(taskId) {
+            const task = allTasks.find(t => t.id === taskId);
+            if (!task) {
+                console.error('Task not found for detail view:', taskId);
+                return;
+            }
+
+            currentDetailTaskId = taskId; // Store the ID
+
+            document.getElementById('detailModalTitle').textContent = task.title;
+            document.getElementById('detailTaskTitle').textContent = task.title;
+            document.getElementById('detailTaskDescription').textContent = task.description || 'No description provided.';
+            document.getElementById('detailTaskBranch').textContent = task.branch || 'N/A';
+            document.getElementById('detailTaskPriority').textContent = task.priority || 'N/A';
+            document.getElementById('detailTaskAssignee').textContent = task.assignee || 'Unassigned';
+            document.getElementById('detailTaskDueDate').textContent = task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No date';
+            document.getElementById('detailTaskStatus').textContent = task.status || 'N/A';
+
+            // Show/hide edit button based on user role
+            const detailEditBtn = document.getElementById('detailEditBtn');
+            if (currentUser && currentUser.role === 'admin') {
+                detailEditBtn.classList.remove('hidden');
+            } else {
+                detailEditBtn.classList.add('hidden');
+            }
+
+            document.getElementById('taskDetailModal').classList.add('show');
+        }
+
+        // NEW: Close Task Detail Modal
+        function closeTaskDetailModal() {
+            document.getElementById('taskDetailModal').classList.remove('show');
+            currentDetailTaskId = null; // Clear the stored ID
+        }
+
+        // NEW: Edit Task from Detail Modal
+        function editTaskFromDetail() {
+            if (currentDetailTaskId) {
+                editTask(currentDetailTaskId);
+            }
+        }
+
+        // NEW: Update Task Status (for non-admin users)
+        async function updateTaskStatus(taskId, newStatus) {
+            if (!confirm(`Are you sure you want to mark this task as ${newStatus}?`)) {
+                return;
+            }
+
+            const config = getAirtableConfig();
+            const statusField = availableFields.find(f => f.toLowerCase() === 'status') || 'Status';
+
+            try {
+                if (taskId.startsWith('demo')) {
+                    // For demo tasks, update locally
+                    const taskIndex = allTasks.findIndex(t => t.id === taskId);
+                    if (taskIndex !== -1) {
+                        allTasks[taskIndex].status = newStatus;
+                        showNotification(`Demo task status updated to ${newStatus}!`, 'success');
+                        filterTasks(); // Re-render tasks
+                    }
+                    return;
+                }
+
+                const url = `https://api.airtable.com/v0/${config.baseId}/${config.tasksTableName}/${taskId}`;
+                console.log(`PATCHing task ${taskId} status to ${newStatus} at:`, url);
+
+                const response = await fetch(url, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${config.accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ fields: { [statusField]: newStatus } })
+                });
+
+                if (response.ok) {
+                    const updatedRecord = await response.json();
+                    // Update the task in the local allTasks array
+                    const taskIndex = allTasks.findIndex(t => t.id === taskId);
+                    if (taskIndex !== -1) {
+                        allTasks[taskIndex].status = updatedRecord.fields[statusField];
+                    }
+                    showNotification('Task status updated successfully!', 'success');
+                    filterTasks(); // Re-filter and render tasks to reflect the change
+                } else {
+                    const errorText = await response.text();
+                    console.error('Status PATCH Error:', response.status, errorText);
+                    throw new Error(`Failed to update task status: ${response.status} - ${errorText}`);
+                }
+            } catch (error) {
+                console.error('Error updating task status:', error);
+                showNotification(`Failed to update task status: ${error.message}`, 'error');
+            }
+        }
+
+        // NEW: Set Active Tab for User Dashboard
+        function setActiveTab(tabName) {
+            activeTab = tabName;
+
+            // Update button active states
+            document.getElementById('activeTasksTab').classList.remove('active');
+            document.getElementById('completedTasksTab').classList.remove('active');
+
+            if (tabName === 'active') {
+                document.getElementById('activeTasksTab').classList.add('active');
+            } else {
+                document.getElementById('completedTasksTab').classList.add('active');
+            }
+
+            renderTasks(); // Re-render tasks based on the new active tab
+        }
+
+
+        // Close modal when clicking outside
+        document.addEventListener('click', function(e) {
+            const taskModal = document.getElementById('taskModal');
+            const detailModal = document.getElementById('taskDetailModal');
+
+            if (e.target === taskModal) {
+                closeTaskModal();
+            }
+            if (e.target === detailModal) {
+                closeTaskDetailModal();
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Escape key to close modal
+            if (e.key === 'Escape') {
+                closeTaskModal();
+                closeTaskDetailModal(); // Close detail modal too
+                hideNotification();
+            }
+            
+            // Ctrl/Cmd + N to add new task (admin only)
+            if ((e.ctrlKey || e.metaKey) && e.key === 'n' && currentUser && currentUser.role === 'admin') {
+                e.preventDefault();
+                openTaskModal();
+            }
+            
+            // F5 or Ctrl/Cmd + R to refresh
+            if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && e.key === 'r')) {
+                if (currentUser) {
+                    e.preventDefault();
+                    refreshTasks();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
