@@ -1,0 +1,457 @@
+.login-bg {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+.task-card {
+    transition: all 0.3s ease;
+    border-left: 4px solid #e5e7eb;
+    cursor: pointer; /* Add cursor pointer to indicate clickability */
+}
+.task-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+.priority-high { border-left-color: #ef4444; }
+.priority-medium { border-left-color: #f59e0b; }
+.priority-low { border-left-color: #10b981; }
+.status-pending { background-color: #fef3c7; color: #92400e; }
+.status-progress { background-color: #dbeafe; color: #1e40af; }
+.status-completed { background-color: #d1fae5; color: #065f46; }
+.status-overdue { background-color: #fee2e2; color: #991b1b; }
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+}
+.modal.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.loading-spinner {
+    border: 4px solid #f3f4f6;
+    border-top: 4px solid #3b82f6;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 2000;
+    min-width: 300px;
+    transform: translateX(400px);
+    transition: transform 0.3s ease;
+}
+.notification.show {
+    transform: translateX(0);
+}
+/* Tab styles */
+.tab-button {
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+.tab-button.active {
+    background-color: #4f46e5; /* Indigo 600 */
+    color: white;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+.tab-button:not(.active):hover {
+    background-color: #e0e7ff; /* Indigo 100 */
+    color: #4f46e5; /* Indigo 600 */
+}
+
+/* List View Specific Styles */
+.list-view-container {
+    background-color: #fff;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    padding: 1.5rem;
+}
+
+.list-header {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 0.8fr 0.8fr; /* Adjust column widths as needed */
+    gap: 1rem;
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
+    font-weight: 600;
+    color: #4b5563; /* gray-700 */
+    text-transform: uppercase;
+    font-size: 0.75rem; /* text-xs */
+    align-items: center; /* Vertically align header text */
+}
+
+.list-item {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 0.8fr 0.8fr; /* Match header columns */
+    gap: 1rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid #f3f4f6; /* gray-100 */
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.list-item:hover {
+    background-color: #f9fafb; /* gray-50 */
+}
+
+.list-item:last-child {
+    border-bottom: none;
+}
+
+.list-col-title {
+    font-weight: 500;
+    color: #1f2937; /* gray-900 */
+}
+
+.list-col-branch,
+.list-col-date,
+.list-col-status,
+.list-col-actions {
+    font-size: 0.875rem; /* text-sm */
+    color: #4b5563; /* gray-700 */
+    /* Ensure content doesn't overflow */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ADMIN SUMMARY VIEW STYLES - NEW */
+.admin-summary-header {
+    display: grid;
+    grid-template-columns: 3fr 1fr 1fr 2fr 1fr; /* Task Name | Branch Count | Due Date | Completion % | Actions */
+    gap: 1.5rem;
+    padding: 1rem 1.5rem;
+    background-color: #f8fafc; /* gray-50 */
+    border-radius: 0.5rem;
+    font-weight: 600;
+    color: #374151; /* gray-700 */
+    text-transform: uppercase;
+    font-size: 0.75rem; /* text-xs */
+    letter-spacing: 0.025em;
+    margin-bottom: 1rem;
+    border: 1px solid #e5e7eb; /* gray-200 */
+}
+
+.admin-summary-item {
+    display: grid;
+    grid-template-columns: 3fr 1fr 1fr 2fr 1fr; /* Match header columns */
+    gap: 1.5rem;
+    padding: 1.5rem;
+    border-bottom: 1px solid #f3f4f6; /* gray-100 */
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 0.5rem;
+    margin-bottom: 0.5rem;
+    background-color: #ffffff;
+    border: 1px solid #f3f4f6;
+}
+
+.admin-summary-item:hover {
+    background-color: #f9fafb; /* gray-50 */
+    border-color: #e5e7eb; /* gray-200 */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.admin-summary-item:last-child {
+    border-bottom: none;
+}
+
+.summary-col-title h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937; /* gray-900 */
+    margin-bottom: 0.25rem;
+    line-height: 1.25;
+}
+
+.summary-col-title p {
+    font-size: 0.75rem;
+    color: #6b7280; /* gray-500 */
+    line-height: 1.4;
+}
+
+.summary-col-branches {
+    text-align: center;
+}
+
+.summary-col-branches span:first-child {
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #2563eb; /* blue-600 */
+}
+
+.summary-col-branches span:last-child {
+    font-size: 0.75rem;
+    color: #6b7280; /* gray-500 */
+}
+
+.summary-col-date {
+    text-align: center;
+}
+
+.summary-col-completion {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.summary-col-completion .flex {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.summary-col-completion .w-16 {
+    width: 4rem;
+    height: 0.5rem;
+    background-color: #e5e7eb; /* gray-200 */
+    border-radius: 9999px;
+    overflow: hidden;
+}
+
+.summary-col-completion .bg-green-600 {
+    background-color: #059669; /* green-600 */
+    height: 100%;
+    border-radius: 9999px;
+    transition: width 0.3s ease;
+}
+
+.summary-col-actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+}
+
+.summary-col-actions button {
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+    transition: all 0.2s ease;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+}
+
+.summary-col-actions button:hover {
+    background-color: #f3f4f6; /* gray-100 */
+}
+
+/* Branch Details Modal Styles - NEW */
+.branch-details-container {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.branch-details-header {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1.5fr 2fr; /* Branch | Status | Assignee | Note */
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    background-color: #f8fafc; /* gray-50 */
+    border-radius: 0.375rem;
+    font-weight: 600;
+    color: #374151; /* gray-700 */
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid #e5e7eb;
+}
+
+.branch-details-item {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1.5fr 2fr; /* Match header columns */
+    gap: 1rem;
+    padding: 1rem;
+    border-bottom: 1px solid #f3f4f6;
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    border-radius: 0.375rem;
+    margin-bottom: 0.25rem;
+}
+
+.branch-details-item:hover {
+    background-color: #f9fafb; /* gray-50 */
+}
+
+.branch-details-item:last-child {
+    border-bottom: none;
+}
+
+.branch-col-branch,
+.branch-col-status,
+.branch-col-assignee,
+.branch-col-note {
+    font-size: 0.875rem;
+    color: #4b5563;
+}
+
+.branch-col-branch {
+    font-weight: 500;
+    color: #1f2937;
+}
+
+.branch-col-note {
+    font-size: 0.75rem;
+    color: #6b7280;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+    .admin-summary-header,
+    .admin-summary-item {
+        grid-template-columns: 2fr 1fr 1fr 1fr; /* Remove one column on medium screens */
+        gap: 1rem;
+    }
+    
+    .summary-col-completion .flex {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .summary-col-completion .w-16 {
+        width: 3rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .list-header,
+    .list-item {
+        grid-template-columns: 1fr; /* Stack columns on small screens */
+        gap: 0.5rem;
+        padding: 0.75rem; /* Add padding to stacked items */
+    }
+
+    .list-header {
+        border-bottom: none; /* Remove border for stacked header */
+        margin-bottom: 0;
+    }
+
+    .list-item {
+        border: 1px solid #e5e7eb; /* Add border to each item for separation */
+        border-radius: 0.5rem;
+        margin-bottom: 0.75rem;
+        display: block; /* Change to block to stack divs */
+    }
+
+    .list-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .list-col-title,
+    .list-col-branch,
+    .list-col-date,
+    .list-col-status,
+    .list-col-actions {
+        white-space: normal; /* Allow text wrapping */
+        overflow: visible;
+        text-overflow: clip;
+        margin-bottom: 0.25rem; /* Small margin between stacked elements */
+    }
+
+    .list-col-actions {
+        justify-content: flex-start;
+        padding-top: 0.5rem;
+        margin-bottom: 0;
+    }
+
+    /* Admin summary responsive */
+    .admin-summary-header,
+    .admin-summary-item {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+        padding: 1rem;
+    }
+
+    .admin-summary-header {
+        display: none; /* Hide header on mobile as it becomes stacked */
+    }
+
+    .admin-summary-item {
+        display: block;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+        padding: 1.5rem;
+    }
+
+    .summary-col-title,
+    .summary-col-branches,
+    .summary-col-date,
+    .summary-col-completion,
+    .summary-col-actions {
+        margin-bottom: 1rem;
+    }
+
+    .summary-col-branches,
+    .summary-col-date {
+        text-align: left;
+    }
+
+    .summary-col-actions {
+        justify-content: flex-start;
+        margin-bottom: 0;
+    }
+
+    /* Branch details responsive */
+    .branch-details-header,
+    .branch-details-item {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+        padding: 1rem;
+    }
+
+    .branch-details-header {
+        display: none; /* Hide header on mobile */
+    }
+
+    .branch-details-item {
+        display: block;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.375rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .branch-col-branch,
+    .branch-col-status,
+    .branch-col-assignee,
+    .branch-col-note {
+        margin-bottom: 0.5rem;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+    }
+
+    .branch-col-note:last-child {
+        margin-bottom: 0;
+    }
+}
+
