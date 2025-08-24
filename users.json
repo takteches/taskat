@@ -1,5 +1,22 @@
-[
-    { username: 'C001', password: '1234', role: 'user' },
-    { username: 'C002', password: '1234', role: 'user' },
-    { username: 'manager1', password: 'manager123', role: 'manager' }
-  ]
+       [
+          {
+            "username": "admin",
+            "passwordHash": "112233",
+            "role": "user",
+            "fullName": "User One"
+          },
+          {
+            "username": "C001",
+            "passwordHash": "1234",
+            "role": "user",
+            "fullName": "User Two"
+          },
+          {
+            "username": "branchuser",
+            "passwordHash": "YOUR_HASHED_PASSWORD_FOR_BRANCHUSER",
+            "role": "user",
+            "fullName": "Branch User",
+            "branch": "BranchA"
+          }
+        ]
+        
