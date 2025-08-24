@@ -163,6 +163,7 @@ async function loadUsersFromJson() {
         // IMPORTANT: Replace with the RAW URL to your users.json file on GitHub.
         // Example: https://raw.githubusercontent.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME/main/data/users.json
         const jsonUrl = 'https://raw.githubusercontent.com/takteches/taskat/main/users.json'; 
+        console.log("Hash for '112233':", createSecureHash('112233'));
 
         const response = await fetch(jsonUrl);
         if (!response.ok) {
