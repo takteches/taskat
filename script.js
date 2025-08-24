@@ -17,11 +17,13 @@
 // Enhanced configuration with multiple layers of obfuscation
 const _config = (() => {
     const parts = ['19pWWNEBYlep9VU6gT', 'cYDknYzzrefKoN'];
-    const base = 'aHR0cHM6Ly9hcGkuYmFzZXJvdy5pby9hcGkvZGF0YWJhc2Uvcm93cy90YWJsZS8=';
+    // EDITED: Directly using HTTPS URL for clarity and to prevent mixed content issues.
+    const base = 'https://api.baserow.io/api/database/rows/table/';
 
     return {
         getKey: () => parts.join(''),
-        getBase: () => atob(base),
+        // EDITED: No longer decoding, as 'base' is now the direct URL.
+        getBase: () => base,
         dbId: '276777',
         tables: {
             u: '647091',
