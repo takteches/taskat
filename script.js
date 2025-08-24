@@ -381,48 +381,61 @@ function showLoginError(message) {
 }
 
 // Enhanced task loading with data protection
+// ... (existing code) ...
+
+// Enhanced user loading with data protection and pagination
+
+// Enhanced task loading with data protection and pagination
 async function loadTasks() {
     document.getElementById('loadingSpinner').classList.remove('hidden');
     document.getElementById('tasksContainer').innerHTML = '';
     document.getElementById('tasksListContainer').innerHTML = ''; // Clear list container too
 
     try {
-        const url = `${_config.getBase()}${_config.tables.t}/?user_field_names=true`;
+        let allTasks = [];
+        let nextUrl = `${_config.getBase()}${_config.tables.t}/?user_field_names=true`;
 
-        const response = await apiClient.makeRequest(url);
-        const data = await response.json();
+        while (nextUrl) {
+            const response = await apiClient.makeRequest(nextUrl);
+            const data = await response.json();
 
-        if (data.results && data.results.length > 0) {
-            appState.availableFields = Object.keys(data.results[0]);
+            if (data.results && data.results.length > 0) {
+                // Only set availableFields once from the first response
+                if (allTasks.length === 0) {
+                    appState.availableFields = Object.keys(data.results[0]);
+                }
 
-            // Process tasks with enhanced security
-            const processedTasks = [];
-            for (const record of data.results) {
-                processedTasks.push({
-                    Id: String(record.id || record.Id),
-                    title: validateInput(record.Title || record.title || '', 'text', 200),
-                    description: validateInput(record.Description || record.description || '', 'text', 1000),
-                    branch: validateInput(record.Branch || record.branch || ''),
-                    priority: validateInput(record.Priority || record.priority || ''),
-                    assignee: validateInput(record.Assignee || record.assignee || ''),
-                    dueDate: validateInput(record['Due Date'] || record.DueDate || '', 'date'),
-                    status: validateInput(record.Status || record.status || 'Pending'),
-                    userNote: validateInput(record['User Note'] || record.UserNote || '', 'text', 500),
-                    createdAt: record.created_at || record.Created_At || new Date().toISOString() // Add created at
-                });
+                // Process tasks with enhanced security
+                for (const record of data.results) {
+                    allTasks.push({
+                        Id: String(record.id || record.Id),
+                        title: validateInput(record.Title || record.title || '', 'text', 200),
+                        description: validateInput(record.Description || record.description || '', 'text', 1000),
+                        branch: validateInput(record.Branch || record.branch || ''),
+                        priority: validateInput(record.Priority || record.priority || ''),
+                        assignee: validateInput(record.Assignee || record.assignee || ''),
+                        dueDate: validateInput(record['Due Date'] || record.DueDate || '', 'date'),
+                        status: validateInput(record.Status || record.status || 'Pending'),
+                        userNote: validateInput(record['User Note'] || record.UserNote || '', 'text', 500),
+                        createdAt: record.created_at || record.Created_At || new Date().toISOString() // Add created at
+                    });
+                }
+                nextUrl = data.next; // Get the URL for the next page
+            } else {
+                nextUrl = null; // No more results
             }
-
-            appState.allTasks = processedTasks;
-
-            // Clear the response data immediately
-            data.results = null;
-
-            showNotification('Tasks loaded successfully!', 'success');
-        } else {
-            throw new Error('No tasks found');
         }
+
+        if (allTasks.length > 0) {
+            appState.allTasks = allTasks;
+            showNotification(`Loaded ${allTasks.length} tasks from Baserow.`, 'success');
+        } else {
+            throw new Error('No tasks found from Baserow. Using demo data.');
+        }
+
     } catch (error) {
-        showNotification('Failed to load tasks. Using demo data.', 'warning');
+        console.error('Error loading tasks from Baserow:', error);
+        showNotification('Failed to load tasks from Baserow. Using demo data.', 'warning');
         appState.allTasks = generateDemoTasks();
     }
 
@@ -433,49 +446,7 @@ async function loadTasks() {
     populateFilters();
 }
 
-// Enhanced task filtering
-function filterTasks() {
-    let tempFilteredTasks = appState.allTasks;
-
-    if (appState.currentUser && appState.currentUser.role !== 'admin') {
-        const username = appState.currentUser.username;
-        const existingBranches = [...new Set(appState.allTasks.map(task => task.branch).filter(b => b))];
-        const isBranchUser = existingBranches.includes(username);
-
-        if (isBranchUser) {
-            tempFilteredTasks = tempFilteredTasks.filter(task => task.branch === username);
-        } else {
-            tempFilteredTasks = tempFilteredTasks.filter(task =>
-                task.assignee === appState.currentUser.fullName ||
-                task.assignee === appState.currentUser.username
-            );
-        }
-    } else if (appState.currentUser && appState.currentUser.role === 'admin') {
-        const branchFilter = document.getElementById('branchFilter').value;
-        const userFilter = document.getElementById('userFilter').value;
-        const statusFilter = document.getElementById('statusFilter').value;
-        const priorityFilter = document.getElementById('priorityFilter').value;
-
-        tempFilteredTasks = appState.allTasks.filter(task => {
-            if (branchFilter && task.branch !== branchFilter) return false;
-            if (userFilter && task.assignee !== userFilter) return false;
-            if (statusFilter) {
-                if (statusFilter === 'Overdue') {
-                    if (task.status === 'Completed' || new Date(task.dueDate) >= new Date()) return false;
-                } else if (task.status !== statusFilter) {
-                    return false;
-                }
-            }
-            if (priorityFilter && task.priority !== priorityFilter) return false;
-            return true;
-        });
-    }
-
-    appState.filteredTasks = tempFilteredTasks;
-    updateStats();
-    renderTasks();
-    updateFilterSummary();
-}
+// ... (rest of your existing code) ...
 
 // Enhanced task saving
 async function saveTask() {
