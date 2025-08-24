@@ -191,7 +191,7 @@ async function loadUsersFromJson() {
     }
 }
 // --- END NEW FUNCTION ---
-
+console.log("Hash for '112233':", createSecureHash('112233'));
 // Enhanced task loading with data protection and pagination (still uses Baserow)
 async function loadTasks() {
     document.getElementById('loadingSpinner').classList.remove('hidden');
