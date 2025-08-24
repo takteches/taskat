@@ -1,22 +1,23 @@
        [
           {
             "username": "admin",
-            "passwordHash": "112233",
+            "passwordHash": "3ccaa327f23357bc6728d8cad870cdc171d6bfc93de271fe3c4a00458634ba62",
             "role": "user",
             "fullName": "User One"
           },
           {
             "username": "C001",
-            "passwordHash": "1234",
+            "passwordHash": "3ccaa327f23357bc6728d8cad870cdc171d6bfc93de271fe3c4a00458634ba62",
             "role": "user",
             "fullName": "User Two"
           },
           {
             "username": "branchuser",
-            "passwordHash": "YOUR_HASHED_PASSWORD_FOR_BRANCHUSER",
+            "passwordHash": "3ccaa327f23357bc6728d8cad870cdc171d6bfc93de271fe3c4a00458634ba62",
             "role": "user",
             "fullName": "Branch User",
             "branch": "BranchA"
           }
         ]
         
+
