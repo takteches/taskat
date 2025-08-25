@@ -286,7 +286,7 @@ async function initializeApp() {
 // Enhanced user loading with FULL pagination support for ALL 400+ users
 async function loadAllUsers() {
     try {
-        showNotification('Loading all users...', 'info');
+        
         
         let allFetchedUsers = [];
         let page = 1;
@@ -348,7 +348,7 @@ async function loadAllUsers() {
             allFetchedUsers = null;
 
             console.log(`Successfully loaded ${appState.totalUsersCount} users total`);
-            showNotification(`Loaded ${appState.totalUsersCount} users successfully!`, 'success');
+           
 
         } else {
             throw new Error('No users found');
@@ -357,7 +357,7 @@ async function loadAllUsers() {
         console.error('Error loading users:', error);
         appState.users = getDefaultUsers();
         appState.totalUsersCount = appState.users.length;
-        showNotification('Using default users due to loading error', 'warning');
+        
     }
 }
 
