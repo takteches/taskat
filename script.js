@@ -926,7 +926,7 @@ function filterTasksByStat(statType) {
     showNotification(`Filtered by ${statType} tasks.`, 'info');
 }
 
-// NEW: Function to download reports
+// NEW: Function to download reports with proper Arabic/Unicode support
 function downloadReport(type) {
     if (appState.currentUser.role !== 'admin') {
         showNotification('Only administrators can download reports.', 'warning');
@@ -944,6 +944,10 @@ function downloadReport(type) {
         case 'pending':
             tasksToReport = appState.allTasks.filter(task => task.status === 'Pending');
             fileName = 'pending_tasks_report.csv';
+            break;
+        case 'inProgress': // ADD THIS CASE FOR IN PROGRESS
+            tasksToReport = appState.allTasks.filter(task => task.status === 'In Progress');
+            fileName = 'in_progress_tasks_report.csv';
             break;
         case 'completed':
             tasksToReport = appState.allTasks.filter(task => task.status === 'Completed');
@@ -971,24 +975,34 @@ function downloadReport(type) {
 
     tasksToReport.forEach(task => {
         const row = [
-            `"${task.Id}"`,
-            `"${task.title.replace(/"/g, '""')}"`, // Escape double quotes
-            `"${task.description.replace(/"/g, '""')}"`,
-            `"${task.branch.replace(/"/g, '""')}"`,
-            `"${task.priority.replace(/"/g, '""')}"`,
-            `"${task.assignee.replace(/"/g, '""')}"`,
-            `"${task.dueDate}"`,
-            `"${task.status.replace(/"/g, '""')}"`,
-            `"${task.userNote.replace(/"/g, '""')}"`,
-            `"${task.createdAt}"`
+            `"${task.Id || ''}"`,
+            `"${(task.title || '').replace(/"/g, '""')}"`, // Escape double quotes
+            `"${(task.description || '').replace(/"/g, '""')}"`,
+            `"${(task.branch || '').replace(/"/g, '""')}"`,
+            `"${(task.priority || '').replace(/"/g, '""')}"`,
+            `"${(task.assignee || '').replace(/"/g, '""')}"`,
+            `"${task.dueDate || ''}"`,
+            `"${(task.status || '').replace(/"/g, '""')}"`,
+            `"${(task.userNote || '').replace(/"/g, '""')}"`,
+            `"${task.createdAt || ''}"`
         ];
         csvRows.push(row.join(','));
     });
 
     const csvString = csvRows.join('\n');
-    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    
+    // CRITICAL FIX: Add BOM (Byte Order Mark) for proper UTF-8 encoding
+    // This ensures Arabic and other Unicode characters display correctly
+    const BOM = '\uFEFF';
+    const csvWithBOM = BOM + csvString;
+    
+    // CRITICAL FIX: Specify UTF-8 encoding explicitly
+    const blob = new Blob([csvWithBOM], { 
+        type: 'text/csv;charset=utf-8;' 
+    });
+    
     const link = document.createElement('a');
-    if (link.download !== undefined) { // Feature detection for download attribute
+    if (link.download !== undefined) { // FIXED: Added 'undefined' check
         const url = URL.createObjectURL(blob);
         link.setAttribute('href', url);
         link.setAttribute('download', fileName);
@@ -996,10 +1010,38 @@ function downloadReport(type) {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        
+        // Clean up the URL object
+        setTimeout(() => {
+            URL.revokeObjectURL(url);
+        }, 100);
+        
         showNotification(`Report "${fileName}" downloaded successfully!`, 'success');
     } else {
-        showNotification('Your browser does not support downloading files directly. Please copy the data.', 'warning');
+        // Fallback for browsers that don't support download attribute
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        showNotification('Report opened in new tab. Please save the file manually.', 'info');
+        
+        // Clean up the URL object
+        setTimeout(() => {
+            URL.revokeObjectURL(url);
+        }, 1000);
     }
+}
+
+// NEW: Open Report Download Modal
+function openReportDownloadModal() {
+    if (appState.currentUser && appState.currentUser.role === 'admin') {
+        document.getElementById('reportDownloadModal').classList.add('show');
+    } else {
+        showNotification('You do not have permission to download reports.', 'error');
+    }
+}
+
+// NEW: Close Report Download Modal
+function closeReportDownloadModal() {
+    document.getElementById('reportDownloadModal').classList.remove('show');
 }
 
 // NEW: Open Report Download Modal
